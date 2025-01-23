@@ -30,30 +30,25 @@ app.add_middleware(
 FUNCTION_DEFINITIONS = [
     {
         "name": "flowiseQuery",
-        "description": """Use this function to provide natural conversational filler before looking up information.
-        ALWAYS call this function first with message_type='lookup' when you're about to look up customer information.
-        After calling this function, you MUST immediately follow up with the appropriate lookup function (e.g., find_customer).""",
+        "description": """Use this function to provide natural conversational with our ai agent.""",
         "parameters": {
             "type": "object",
             "properties": {
                 "message_type": {
                     "type": "string",
                     "description": "Type of filler message to use. Use 'lookup' when about to search for information.",
-                    "enum": ["lookup", "general"]
+                    "enum": ["general"]
                 },
                 "question": {
                     "type": "string",
                     "description": "The question asked by the user",
-                    "enum": ["lookup", "general"]
+                    "enum": ["general"]
                 }
             },
             "required": ["message_type", "question"]
         }
     }
 ]
-
-# Optionally serve static files
-# app.mount("/static", StaticFiles(directory="static"), name="static")
 
 def sts_connect():
     sts_ws = websockets.connect(
@@ -102,6 +97,8 @@ async def twilio_handler(twilio_ws: WebSocket):
             "type": "InjectAgentMessage",
             "message": "Hello! I'm lola, welcome to Aychihuahua Restaurant. How can I help you today?"
         }
+
+        await asyncio.sleep(1)
         await sts_ws.send(json.dumps(initial_message))
 
         async def sts_sender(sts_ws):
@@ -124,7 +121,6 @@ async def twilio_handler(twilio_ws: WebSocket):
                         }
                         await twilio_ws.send_text(json.dumps(clear_message))
                     elif decoded['type'] == 'FunctionCallRequest':
-                        print("yooo")
                         function_name = decoded['function_name']
                         func = FUNCTION_MAP.get(function_name)
                         question = decoded["input"]["question"]
@@ -132,11 +128,8 @@ async def twilio_handler(twilio_ws: WebSocket):
                         if not func:
                             raise ValueError(f"Function {function_name} not found")
 
-                        if function_name in ["test"]:
+                        if function_name in ["flowiseQuery"]:
                             result = await func(question)
-                            
-                            print(result)
-
                             await sts_ws.send(json.dumps({
                                 "type": "InjectAgentMessage",
                                 "message": result
@@ -188,42 +181,6 @@ async def twilio_handler(twilio_ws: WebSocket):
 async def root():
     return {"message": "Twilio Voice AI Server"}
 
-@app.post("/flowise/chat/{chat_id}")
-async def root(request: Request):
-    body = await request.json()
-    print(body)
-    return {
-    "id": "chatcmpl-7d364854-19c4-4a3d-868f-14a3623d636c",
-    "object": "chat.completion",
-    "created": 1737589428,
-    "model": "customflowise",
-    "choices": [
-        {
-            "index": 0,
-            "message": {
-                "role": "assistant",
-                "content": "Fast language models are crucial in the field of natural language processing (NLP) due to their ability to efficiently and accurately process vast amounts of language data. The importance of fast language models can be summarized as follows:\n\n1. **Improved Response Times**: Fast language models can respond to user queries in real-time, which is essential for applications that require immediate interaction, such as chatbots, virtual assistants, and language translation systems.\n2. **Enhanced User Experience**: By providing quick and accurate responses, fast language models can significantly improve the overall user experience. This is particularly important for applications that rely on user engagement, such as customer service chatbots, language learning platforms, and online forums.\n3. **Increased Efficiency**: Fast language models can process large volumes of language data quickly, allowing them to be used in a wide range of applications, including text analysis, sentiment analysis, and topic modeling. This increased efficiency enables organizations to automate tasks, reduce manual labor, and improve overall productivity.\n4. **Real-Time Analytics**: Fast language models can analyze streaming data, such as social media posts, news articles, and online reviews, in real-time. This allows organizations to gain instant insights into customer opinions, market trends, and emerging topics.\n5. **Competitive Advantage**: Organizations that adopt fast language models can gain a competitive advantage by being able to respond quickly to changing market conditions, customer needs, and emerging trends.\n6. **Scalability**: Fast language models can handle large volumes of data, making them scalable for applications that require processing vast amounts of language data, such as data warehousing, business intelligence, and data science.\n7. **Multilingual Support**: Fast language models can support multiple languages, enabling organizations to expand their reach and interact with customers worldwide.\n8. **Improved Accuracy**: By processing language data quickly, fast language models can also improve accuracy by reducing the impact of noise, ambiguity, and uncertainty in the data.\n9. **Support for Edge AI**: Fast language models can run on edge devices, such as smartphones, smart home devices, and autonomous vehicles, enabling AI-powered applications to operate in real-time, even in areas with limited internet connectivity.\n10. **Advancements in Research**: Fast language models can accelerate research in NLP, enabling researchers to explore new ideas, test hypotheses, and develop more advanced language models, which can lead to breakthroughs in areas like language understanding, generation, and reasoning.\n\nSome of the applications that benefit from fast language models include:\n\n* Virtual assistants (e.g., Siri, Alexa, Google Assistant)\n* Chatbots and customer service platforms\n* Language translation systems\n* Sentiment analysis and opinion mining\n* Text summarization and extraction\n* Language learning platforms\n* Social media monitoring and analytics\n* Edge AI applications (e.g., smart home devices, autonomous vehicles)\n\nIn summary, fast language models are essential for a wide range of applications that require efficient, accurate, and real-time processing of language data. Their importance lies in their ability to improve response times, enhance user experience, increase efficiency, and provide real-time insights, ultimately leading to a competitive advantage and advancements in research."
-            },
-            "logprobs": None,
-            "finish_reason": "stop"
-        }
-    ],
-    "usage": {
-        "queue_time": 0.026058129000000003,
-        "prompt_tokens": 43,
-        "prompt_time": 0.00741068,
-        "completion_tokens": 632,
-        "completion_time": 2.2981818179999998,
-        "total_tokens": 675,
-        "total_time": 2.305592498
-    },
-    "system_fingerprint": "fp_4196e754db",
-    "x_groq": {
-        "id": "req_01jj86d4gjeqraajfvd58p7bsf"
-    }
-
-}
-
 # WebSocket route
 @app.websocket("/twilio")
 async def websocket_endpoint(websocket: WebSocket):
@@ -240,7 +197,6 @@ async def websocket_endpoint(websocket: WebSocket):
 async def flowiseQuery(question: str):
     """
     Handle agent filler messages while maintaining proper function call protocol.
-    Returns a simple confirmation first, then sends the actual message to the client.
     """
     client = Flowise('https://flowiseai.dbctechnology.com', os.getenv('FLOWISE_TOKEN'))
 
