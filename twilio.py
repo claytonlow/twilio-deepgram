@@ -8,12 +8,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 import uvicorn
+import requests
 from typing import Dict
 import time
 from flowise import Flowise, PredictionData, IMessage, IFileUpload
-import os
 from dotenv import load_dotenv
 load_dotenv()
+import os
 
 
 app = FastAPI()
@@ -180,6 +181,32 @@ async def twilio_handler(twilio_ws: WebSocket):
 @app.get("/")
 async def root():
     return {"message": "Twilio Voice AI Server"}
+
+
+@app.get("/twilio/numbers")
+async def root():
+    # Find your Account SID and Auth Token at twilio.com/console
+    # and set the environment variables. See http://twil.io/secure
+    account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+    
+    # API endpoint
+    url = f'https://api.twilio.com/2010-04-01/Accounts/{account_sid}/IncomingPhoneNumbers.json'
+
+    # Make the request
+    response = requests.get(url, auth=(account_sid, auth_token))
+
+    # Check if the request was successful
+    if response.status_code == 200:
+        # Parse the JSON response
+        phone_numbers = response.json()
+        return phone_numbers
+    else:
+        print(f"Error: {response.status_code}")
+        print(response.text)
+        return {"error": "Unable to fetch phone numbers"}
+
+    
 
 # WebSocket route
 @app.websocket("/twilio")
