@@ -1,0 +1,5 @@
+asyncio
+websockets
+ssl
+requests
+python-dotenv
