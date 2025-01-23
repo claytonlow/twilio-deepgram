@@ -2,3 +2,6 @@ asyncio
 websockets
 requests
 python-dotenv
+fastapi
+uvicorn
+flowise
